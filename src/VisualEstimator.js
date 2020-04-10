@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit-element';
 
 import { Network } from 'https://unpkg.com/vis-network?module';
 import { fetchNodes } from './api';
+import calculate from './data';
 
 export class VisualEstimator extends LitElement {
   static get properties() {
@@ -9,7 +10,11 @@ export class VisualEstimator extends LitElement {
       network: { type: Object },
       nodes: { type: Array },
       edges: { type: Array },
-      q: { type: String },
+      objectiveQuery: { type: String },
+      ticketQuery: { type: String },
+      pointsPerSprint: { type: Number },
+      __rawNodes: { type: Array },
+      __rawEdges: { type: Array },
     };
   }
 
@@ -17,11 +22,16 @@ export class VisualEstimator extends LitElement {
     super();
     this.nodes = [];
     this.edges = [];
-    this.q = '';
+    this.objectiveQuery = '';
+    this.ticketQuery = '';
+    this.pointsPerSprint = 16;
   }
 
-  firstUpdated() {
-    this.applyNetwork();
+  updated(changedProperties) {
+    super.updated();
+    if (changedProperties.has('pointsPerSprint')) {
+      this.applyNetwork();
+    }
   }
 
   static get styles() {
@@ -30,6 +40,7 @@ export class VisualEstimator extends LitElement {
         min-height: 100vh;
         display: flex;
         flex-direction: column;
+        flex-wrap: wrap;
         align-items: center;
         justify-content: flex-start;
         font-size: calc(10px + 2vmin);
@@ -44,14 +55,19 @@ export class VisualEstimator extends LitElement {
       }
 
       #network {
+        margin-top: 30px;
         width: 100%;
+        height: 250px;
+        box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
       }
 
-      .table,
+      table,
       th,
       td {
         border-collapse: collapse;
         text-align: left;
+        font-size: 10px;
+        border: 1px solid lightgray;
       }
 
       th,
@@ -60,11 +76,11 @@ export class VisualEstimator extends LitElement {
       }
 
       .filter {
-        width: 100%;
+        width: 50%;
         padding: 12px 20px;
         margin: 8px 0;
         box-sizing: border-box;
-        font-size: 16px;
+        font-size: 12px;
       }
 
       .clickable {
@@ -76,13 +92,20 @@ export class VisualEstimator extends LitElement {
     `;
   }
 
-  get filteredNodes() {
-    if (this.q === '') return this.nodes;
-    return this.nodes.filter(n => n.name.toLowerCase().includes(this.q.toLowerCase()));
+  get filteredObjectives() {
+    const filtered = this.nodes.filter(n => n.type === 'objective');
+    if (this.objectiveQuery === '') return filtered;
+    return filtered.filter(n => n.name.toLowerCase().includes(this.objectiveQuery.toLowerCase()));
+  }
+
+  get filteredTickets() {
+    const filtered = this.nodes.filter(n => n.type === 'ticket');
+    if (this.ticketQuery === '') return filtered;
+    return filtered.filter(n => n.name.toLowerCase().includes(this.ticketQuery.toLowerCase()));
   }
 
   handleFilter(e) {
-    this.q = e.target.value;
+    this[e.target.name] = e.target.value;
   }
 
   handleFocusNode(e) {
@@ -92,18 +115,31 @@ export class VisualEstimator extends LitElement {
   }
 
   async applyNetwork() {
-    const { rawNodes, rawEdges } = await fetchNodes();
-    this.nodes = rawNodes;
-    this.edges = rawEdges;
+    if (!this.__rawNodes || this.__rawEdges) {
+      const { rawNodes, rawEdges } = await fetchNodes();
+      this.__rawNodes = rawNodes;
+      this.__rawEdges = rawEdges;
+    }
 
-    const nodes = rawNodes.map(node => ({
+    const { nodes, edges } = calculate({
+      nodes: this.__rawNodes,
+      edges: this.__rawEdges,
+      pointsPerSprint: this.pointsPerSprint,
+    });
+
+    // compute
+    this.nodes = nodes;
+    this.edges = edges;
+
+    const visNodes = this.nodes.map(node => ({
       id: node.id,
       label: node.name,
       level: { objective: 1, ticket: 2 }[node.type],
+      shape: { object: 'circle', ticket: 'box' }[node.type],
     }));
 
     // create an array with edges
-    const edges = rawEdges.map(edge => {
+    const visEdges = this.edges.map(edge => {
       const { id, from, to } = edge;
       return {
         id,
@@ -115,13 +151,15 @@ export class VisualEstimator extends LitElement {
     // create a network
     const container = this.shadowRoot.querySelector('#network');
     const data = {
-      nodes,
-      edges,
+      nodes: visNodes,
+      edges: visEdges,
     };
     const options = {
       layout: {
         hierarchical: true,
       },
+      height: '100%',
+      width: '100%',
     };
     this.network = new Network(container, data, options);
   }
@@ -130,46 +168,100 @@ export class VisualEstimator extends LitElement {
     return html`
       <main>
         <div id="network"></div>
+        Points per Sprint:
+        <input
+          name="pointsPerSprint"
+          .value="${this.pointsPerSprint}"
+          @input="${this.handleFilter}"
+        />
+        <br />
+        <table class="guide" style="float: left;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>
+                Objectives
+                <input
+                  class="filter"
+                  name="objectiveQuery"
+                  .value="${this.objectiveQuery}"
+                  @input="${this.handleFilter}"
+                  placeholder="Ex: Parallel"
+                />
+              </th>
+              <th># Points</th>
+              <th># Sprints</th>
+            </tr>
+            <tr></tr>
+          </thead>
+          <tbody>
+            ${this.filteredObjectives.map(
+              node => html`
+                <tr
+                  class="clickable"
+                  @click=${this.handleFocusNode}
+                  focusable
+                  data-node-id="${node.id}"
+                >
+                  <td>
+                    ${node.id}
+                  </td>
+                  <td>
+                    ${node.name}
+                  </td>
+                  <td>
+                    ${node.points[0]} - ${node.points[1]}
+                  </td>
+                  <td>
+                    ${node.sprints[0]} - ${node.sprints[1]}
+                  </td>
+                </tr>
+              `,
+            )}
+          </tbody>
+        </table>
 
-        <div>
-          <input
-            class="filter"
-            name="q"
-            .value="${this.q}"
-            @input="${this.handleFilter}"
-            placeholder="Ex: Parallel"
-          />
-          <table class="guide">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-              </tr>
-
-              <tr></tr>
-            </thead>
-
-            <tbody>
-              ${this.filteredNodes.map(
-                node => html`
-                  <tr
-                    class="clickable"
-                    @click=${this.handleFocusNode}
-                    focusable
-                    data-node-id="${node.id}"
-                  >
-                    <td>
-                      ${node.id}
-                    </td>
-                    <td>
-                      ${node.name}
-                    </td>
-                  </tr>
-                `,
-              )}
-            </tbody>
-          </table>
-        </div>
+        <table class="guide">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>
+                Tickets
+                <input
+                  class="filter"
+                  name="ticketQuery"
+                  .value="${this.ticketQuery}"
+                  @input="${this.handleFilter}"
+                  placeholder="Ex: Parallel"
+                />
+              </th>
+              <th># Points</th>
+            </tr>
+            <tr></tr>
+          </thead>
+          <tbody>
+            ${this.filteredTickets.map(
+              node => html`
+                <tr
+                  class="clickable"
+                  @click=${this.handleFocusNode}
+                  focusable
+                  data-node-id="${node.id}"
+                >
+                  <td>
+                    ${node.id}
+                  </td>
+                  <td>
+                    ${node.name}
+                  </td>
+                  <td>
+                    ${node.estimate} - ${node.estimate_upper}
+                  </td>
+                </tr>
+              `,
+            )}
+          </tbody>
+        </table>
       </main>
     `;
   }

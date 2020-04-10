@@ -7,6 +7,8 @@ const query = `
       id
       name
       type
+      estimate
+      risk_level
     }
     edges {
       from
