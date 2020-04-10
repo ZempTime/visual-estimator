@@ -7,7 +7,10 @@ const query = `
       id
       name
       type
-      tags
+    }
+    edges {
+      from
+      to
     }
   }
 `;
@@ -16,7 +19,11 @@ const fetchNodes = async () => {
   const response = await fetch(uri, { method: 'POST', body: JSON.stringify({ query }) });
   if (response.ok) {
     const res = await response.json();
-    return res.data.nodes;
+    const { nodes, edges } = res.data;
+    return {
+      rawNodes: nodes,
+      rawEdges: edges,
+    };
   }
 };
 
