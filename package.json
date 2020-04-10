@@ -55,7 +55,6 @@
     "graphql": "^15.0.0",
     "graphql-tag": "^2.10.3",
     "lit-element": "^2.0.1",
-    "lit-html": "^1.0.0",
-    "vis": "https://unpkg.com/browse/vis-network@7.5.2/esnext/esm/"
+    "lit-html": "^1.0.0"
   }
 }
