@@ -20,7 +20,13 @@ const query = `
 `;
 
 const fetchNodes = async () => {
-  const response = await fetch(uri, { method: 'POST', body: JSON.stringify({ query }) });
+  const response = await fetch(uri, {
+    headers: {
+      'X-Hasura-Role': 'app',
+    },
+    method: 'POST',
+    body: JSON.stringify({ query }),
+  });
   if (response.ok) {
     const res = await response.json();
     const { nodes, edges } = res.data;
