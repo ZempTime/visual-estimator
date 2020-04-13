@@ -3,12 +3,13 @@ const protocol = host.includes('localhost') ? 'http' : 'https';
 const uri = `${protocol}://${host}/graphql`;
 const query = `
   query {
-    nodes {
+    nodes(order_by: {order: asc}) {
       id
       name
       type
       estimate
       risk_level
+      order
     }
     edges {
       from
