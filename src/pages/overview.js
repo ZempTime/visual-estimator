@@ -152,6 +152,11 @@ export class OverviewPage extends LitElement {
           shakeTowards: 'roots',
         },
       },
+      physics: {
+        hierarchicalRepulsion: {
+          nodeDistance: 300,
+        },
+      },
       height: '100%',
       width: '100%',
     };
