@@ -22,7 +22,7 @@ const query = `
 const fetchNodes = async () => {
   const response = await fetch(uri, {
     headers: {
-      'X-Hasura-Role': 'app',
+      'X-Hasura-Role': localStorage.getItem('visual-estimator.role'),
     },
     method: 'POST',
     body: JSON.stringify({ query }),
@@ -35,6 +35,9 @@ const fetchNodes = async () => {
       rawEdges: edges,
     };
   }
+  return {
+    errors: [{ message: 'unable to process request' }],
+  };
 };
 
 export { fetchNodes };

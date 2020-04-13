@@ -1,12 +1,14 @@
 import { LitElement, html, css } from 'lit-element';
 
+// eslint-disable-next-line import/no-unresolved
 import { Network } from 'https://unpkg.com/vis-network?module';
-import { fetchNodes } from '../api';
-import calculate from '../data';
+import { fetchNodes } from '../api.js';
+import calculate from '../data.js';
 
 export class OverviewPage extends LitElement {
   static get properties() {
     return {
+      challenge: { type: String },
       network: { type: Object },
       nodes: { type: Array },
       edges: { type: Array },
@@ -20,6 +22,7 @@ export class OverviewPage extends LitElement {
 
   constructor() {
     super();
+    this.challenge = localStorage.getItem('visual-estimator.role') || '';
     this.nodes = [];
     this.edges = [];
     this.objectiveQuery = '';
@@ -82,6 +85,15 @@ export class OverviewPage extends LitElement {
     `;
   }
 
+  handleChallengeInput(e) {
+    this.challenge = e.target.value;
+    localStorage.setItem('visual-estimator.role', this.challenge);
+  }
+
+  submitChallenge() {
+    this.applyNetwork();
+  }
+
   get filteredObjectives() {
     const filtered = this.nodes.filter(n => n.type === 'objective');
     if (this.objectiveQuery === '') return filtered;
@@ -106,7 +118,7 @@ export class OverviewPage extends LitElement {
 
   async applyNetwork() {
     if (!this.__rawNodes || this.__rawEdges) {
-      const { rawNodes, rawEdges } = await fetchNodes();
+      const { rawNodes, rawEdges } = await fetchNodes(this.challenge);
       this.__rawNodes = rawNodes;
       this.__rawEdges = rawEdges;
     }
@@ -167,6 +179,19 @@ export class OverviewPage extends LitElement {
   render() {
     return html`
       <div class="container">
+        <div>
+          <label for="challenge">Enter Challenge</label>
+          <br />
+          <input
+            id="challenge"
+            name="challenge"
+            .value="${this.challenge}"
+            @change="${this.handleChallengeInput}"
+            placeholder="Ex: pandas!"
+          />
+          <br />
+          <button @click="${this.submitChallenge}">Update Challenge</button>
+        </div>
         <div id="network"></div>
         Points per Sprint:
         <input

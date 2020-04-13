@@ -11,13 +11,7 @@ export class VisualEstimator extends LitElement {
   firstUpdated() {
     super.firstUpdated();
     this.router = new Router(this.shadowRoot.getElementById('outlet'));
-    this.router.setRoutes([
-      { path: '/', component: 'overview-page' },
-      {
-        path: '/objectives/:id',
-        component: 'objective-page',
-      },
-    ]);
+    this.router.setRoutes([{ path: '/', component: 'overview-page' }]);
   }
 
   static get styles() {
