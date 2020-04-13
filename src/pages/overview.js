@@ -43,7 +43,7 @@ export class OverviewPage extends LitElement {
       #network {
         margin-top: 30px;
         width: 100%;
-        height: 250px;
+        height: 500px;
         box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
       }
 
@@ -75,6 +75,10 @@ export class OverviewPage extends LitElement {
       .clickable:hover {
         background-color: #f3f3f3;
       }
+
+      .spacer {
+        margin: 10px;
+      }
     `;
   }
 
@@ -97,7 +101,7 @@ export class OverviewPage extends LitElement {
   handleFocusNode(e) {
     const focusedTr = e.composedPath().find(el => el.hasAttribute && el.hasAttribute('focusable'));
     const nodeId = parseInt(focusedTr.dataset.nodeId, 10);
-    this.network.focus(nodeId);
+    this.network.focus(nodeId, { scale: 0.5, animation: true });
   }
 
   async applyNetwork() {
@@ -120,8 +124,8 @@ export class OverviewPage extends LitElement {
     const visNodes = this.nodes.map(node => ({
       id: node.id,
       label: node.name,
-      level: { objective: 1, ticket: 2 }[node.type],
       shape: { object: 'circle', ticket: 'box' }[node.type],
+      color: { objective: '#FFA500' }[node.type],
     }));
 
     // create an array with edges
@@ -142,12 +146,17 @@ export class OverviewPage extends LitElement {
     };
     const options = {
       layout: {
-        hierarchical: true,
+        hierarchical: {
+          enabled: true,
+          sortMethod: 'directed',
+          shakeTowards: 'roots',
+        },
       },
       height: '100%',
       width: '100%',
     };
     this.network = new Network(container, data, options);
+    this.network.focus('13', { scale: 0.5, animation: true });
   }
 
   render() {
@@ -175,8 +184,10 @@ export class OverviewPage extends LitElement {
                   placeholder="Ex: Parallel"
                 />
               </th>
-              <th># Points</th>
-              <th># Sprints</th>
+              <th># Points (Individual)</th>
+              <th># Sprints (Individual)</th>
+              <th># Points (Cumulative)</th>
+              <th># Sprints (Cumulative)</th>
             </tr>
             <tr></tr>
           </thead>
@@ -196,16 +207,24 @@ export class OverviewPage extends LitElement {
                     ${node.name}
                   </td>
                   <td>
-                    ${node.points[0]} - ${node.points[1]}
+                    ${node.pointsInd[0]} - ${node.pointsInd[1]}
                   </td>
                   <td>
-                    ${node.sprints[0]} - ${node.sprints[1]}
+                    ${node.sprintsInd[0]} - ${node.sprintsInd[1]}
+                  </td>
+                  <td>
+                    ${node.pointsCumulative[0]} - ${node.pointsCumulative[1]}
+                  </td>
+                  <td>
+                    ${node.sprintsCumulative[0]} - ${node.sprintsCumulative[1]}
                   </td>
                 </tr>
               `,
             )}
           </tbody>
         </table>
+
+        <span class="spacer"></span>
 
         <table class="guide">
           <thead>

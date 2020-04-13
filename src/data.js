@@ -13,8 +13,20 @@ const calcUpperBound = ({ estimate, risk_level }) => {
   return estimate * (riskLevels[risk_level] || 1.0);
 };
 
+const getNodeType = ({ nodes, id }) => {
+  return nodes.find(n => n.id === id).type;
+};
+
+const ticketEdgesForNodeId = ({ edges, id, nodes }) => {
+  return edges.filter(edge => edge.to === id && getNodeType({ nodes, id }) === 'ticket');
+};
+
+const allEdgesForNodeId = ({ edges, id }) => {
+  return edges.filter(edge => edge.to === id);
+};
+
 export default ({ nodes, edges, pointsPerSprint }) => {
-  const _nodes1 = nodes.map(node => {
+  const _nodesWithPoints = nodes.map(node => {
     if (node.type === 'ticket') {
       return {
         ...node,
@@ -29,29 +41,56 @@ export default ({ nodes, edges, pointsPerSprint }) => {
     };
   });
 
-  const _nodes2 = _nodes1.map(node => {
-    if (node.type === 'objective') {
-      const dependentIds = []; // we sum these up
-      const queue = edges.filter(edge => edge.to === node.id); // we've checked here
+  const _nodesWithSums = _nodesWithPoints.map(currentNode => {
+    if (currentNode.type === 'objective') {
+      const directTickets = []; // tickets directly tied to objective (individual)
+      const directTicketsQueue = allEdgesForNodeId({
+        edges,
+        id: currentNode.id,
+      }).filter(e => _nodesWithPoints.find(n => n.id === e.from).type === 'ticket');
 
-      while (queue.length > 0) {
-        const edgeToExplore = queue.shift();
-        dependentIds.push(edgeToExplore.from);
-
-        edges.forEach(edge => {
-          if (edge.to === edgeToExplore.from) {
-            queue.push(edge);
-          }
-        });
+      while (directTicketsQueue.length > 0) {
+        const edgeToExplore = directTicketsQueue.shift();
+        const potentialNode = _nodesWithPoints.find(n => n.id === edgeToExplore.from);
+        if (potentialNode.type === 'ticket') {
+          directTickets.push(potentialNode);
+          const directTicketEdges = allEdgesForNodeId({
+            edges,
+            id: potentialNode.id,
+          }).filter(e => _nodesWithPoints.find(n => n.id === e.from).type === 'ticket');
+          directTicketsQueue.push(...directTicketEdges);
+        }
       }
 
-      const bounds = dependentIds.reduce(
-        (acc, id) => {
-          const _node = _nodes1.find(n => n.id === id);
+      const boundsInd = directTickets.reduce(
+        (acc, node) => {
+          if (node.type === 'ticket') {
+            acc[0] += parseInt(node.estimate, 10);
+            acc[1] += parseInt(node.estimate_upper, 10);
+          }
 
-          if (_node.type === 'ticket') {
-            acc[0] += parseInt(_node.estimate, 10);
-            acc[1] += parseInt(_node.estimate_upper, 10);
+          return acc;
+        },
+        [0, 0],
+      );
+
+      const allTickets = []; // all tickets required for given objective (cumulative)
+      const allTicketsQueue = allEdgesForNodeId({ edges, id: currentNode.id });
+
+      while (allTicketsQueue.length > 0) {
+        const edgeToExplore = allTicketsQueue.shift();
+        const potentialNode = _nodesWithPoints.find(n => n.id === edgeToExplore.from);
+        if (potentialNode.type === 'ticket') {
+          allTickets.push(potentialNode);
+        }
+        allTicketsQueue.push(...allEdgesForNodeId({ edges, id: potentialNode.id }));
+      }
+
+      const boundsCumulative = allTickets.reduce(
+        (acc, node) => {
+          if (node.type === 'ticket') {
+            acc[0] += parseInt(node.estimate, 10);
+            acc[1] += parseInt(node.estimate_upper, 10);
           }
 
           return acc;
@@ -60,21 +99,26 @@ export default ({ nodes, edges, pointsPerSprint }) => {
       );
 
       return {
-        ...node,
-        points: bounds,
-        sprints: [
-          calcSprints({ pointsPerSprint, points: bounds[0] }),
-          calcSprints({ pointsPerSprint, points: bounds[1] }),
+        ...currentNode,
+        pointsInd: boundsInd,
+        sprintsInd: [
+          calcSprints({ pointsPerSprint, points: boundsInd[0] }),
+          calcSprints({ pointsPerSprint, points: boundsInd[1] }),
+        ],
+        pointsCumulative: boundsCumulative,
+        sprintsCumulative: [
+          calcSprints({ pointsPerSprint, points: boundsCumulative[0] }),
+          calcSprints({ pointsPerSprint, points: boundsCumulative[1] }),
         ],
       };
     }
     return {
-      ...node,
+      ...currentNode,
     };
   });
 
   return {
-    nodes: _nodes2,
+    nodes: _nodesWithSums,
     edges,
   };
 };
