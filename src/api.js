@@ -2,7 +2,7 @@ const host = 'visual-estimator.herokuapp.com/v1/';
 const protocol = host.includes('localhost') ? 'http' : 'https';
 const uri = `${protocol}://${host}/graphql`;
 const query = `
-  query {
+  query overview {
     nodes(order_by: {order: asc}) {
       id
       name
@@ -10,6 +10,7 @@ const query = `
       estimate
       risk_level
       order
+      tags
     }
     edges {
       from

@@ -222,6 +222,7 @@ export class OverviewPage extends LitElement {
                 />
               </th>
               <th># Points</th>
+              <th>tags</th>
             </tr>
             <tr></tr>
           </thead>
@@ -242,6 +243,9 @@ export class OverviewPage extends LitElement {
                   </td>
                   <td>
                     ${node.estimate} - ${node.estimate_upper}
+                  </td>
+                  <td>
+                    ${node.tags}
                   </td>
                 </tr>
               `,
