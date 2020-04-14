@@ -138,6 +138,7 @@ export class OverviewPage extends LitElement {
       label: node.name,
       shape: { object: 'circle', ticket: 'box' }[node.type],
       color: { objective: '#FFA500' }[node.type],
+      hidden: { objective: false, ticket: true }[node.type],
     }));
 
     // create an array with edges
@@ -159,7 +160,7 @@ export class OverviewPage extends LitElement {
     const options = {
       layout: {
         hierarchical: {
-          enabled: true,
+          enabled: false,
           sortMethod: 'directed',
           shakeTowards: 'roots',
         },
