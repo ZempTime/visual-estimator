@@ -22,7 +22,7 @@ const query = `
 const fetchNodes = async () => {
   const response = await fetch(uri, {
     headers: {
-      'X-Hasura-Role': localStorage.getItem('visual-estimator.role'),
+      'X-Hasura-Admin-Secret': localStorage.getItem('visual-estimator.secret'),
     },
     method: 'POST',
     body: JSON.stringify({ query }),

@@ -22,7 +22,7 @@ export class OverviewPage extends LitElement {
 
   constructor() {
     super();
-    this.challenge = localStorage.getItem('visual-estimator.role') || '';
+    this.challenge = localStorage.getItem('visual-estimator.secret') || '';
     this.nodes = [];
     this.edges = [];
     this.objectiveQuery = '';
@@ -87,7 +87,7 @@ export class OverviewPage extends LitElement {
 
   handleChallengeInput(e) {
     this.challenge = e.target.value;
-    localStorage.setItem('visual-estimator.role', this.challenge);
+    localStorage.setItem('visual-estimator.secret', this.challenge);
   }
 
   submitChallenge() {
