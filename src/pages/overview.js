@@ -273,6 +273,7 @@ export class OverviewPage extends LitElement {
               </th>
               <th># Points</th>
               <th>tags</th>
+              <th>risk</th>
             </tr>
             <tr></tr>
           </thead>
@@ -296,6 +297,9 @@ export class OverviewPage extends LitElement {
                   </td>
                   <td>
                     ${node.tags}
+                  </td>
+                  <td>
+                    ${node.risk_level}
                   </td>
                 </tr>
               `,
